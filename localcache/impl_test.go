@@ -61,10 +61,10 @@ func TestGet(t *testing.T) {
 
 	for _, tc := range testCases {
 		if tc.expired {
-		  // mock time.Time.Before()
-	      timeBefore = func(_ time.Time, _ time.Time) bool {
-		    return true
-	      }
+			// mock time.Time.Before()
+	    	timeBefore = func(_ time.Time, _ time.Time) bool {
+				return true
+	    	}
 		}
 
 		if val, err := cache.Get(tc.key); val != tc.expectVal || tc.err != err {
