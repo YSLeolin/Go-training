@@ -1,75 +1,75 @@
 package localcache
 
 import (
-	"reflect"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSet(t *testing.T) {
+	cache := NewLocalCache()
 
 	timeNow = func() time.Time {
 		return time.Unix(1654041600, 0)
 	}
 
-	expect := &localCache{
-		data: map[string]cacheItem{
-			"test": {
-				value:    "123",
-				expiration: timeNow().Add(30 * time.Second),
-			},
-		},
+	type testCase struct {
+		desc      string
+		key       string
+		value     interface{}
+		expectVal interface{}
+		err  error
 	}
 
-	cache := NewLocalCache()
+	testCases := []testCase{
+		{desc: "first set", key: "key1", value: "value1", expectVal: "value1", err: nil},
+		{desc: "second set and cover value ", key: "key1", value: "value2", expectVal: "value2", err: nil},
+	}
 
-	cache.Set("test", "123")
-	assert.Equal(t, reflect.DeepEqual(cache, expect), true, "Should be equal")
+	for _, tc := range testCases {
+		cache.Set(tc.key, tc.value)
+
+		if val := cache.data["key1"]; val.value != tc.expectVal || tc.err != nil {
+			t.Errorf("Set failed")
+		}
+	}
 }
 
 func TestGet(t *testing.T) {
 
+	type testCase struct {
+		desc      string
+		key       string
+		value     interface{}
+		expectVal interface{}
+		err  error
+		expired bool
+	}
+
 	cache := &localCache{
 		data: map[string]cacheItem{
-			"test": {
-				value:    "123",
+			"key": {
+				value:    "value",
 				expiration: timeNow().Add(30 * time.Second),
 			},
 		},
 	}
 
-	value, err := cache.Get("test")
-	assert.Nil(t, err, "Should be nil")
-	assert.Equal(t, value, "123", "Should be equal")
-}
-
-func TestGet_ErrKeyNotExist(t *testing.T) {
-	c := NewLocalCache()
-
-	val, err := c.Get("a")
-
-	assert.Nil(t, val)
-	assert.Equal(t, err, ErrKeyNotExist, "key should not exist.")
-}
-
-func TestGet_ErrKeyExpired(t *testing.T) {
-	cache := &localCache{
-		data: map[string]cacheItem{
-			"test": {
-				value:    "123",
-				expiration: timeNow().Add(30 * time.Second),
-			},
-		},
+	testCases := []testCase{
+		{desc: "get success", key: "key", expectVal: "value", err: nil, expired: false},
+		{desc: "get error ErrKeyNotExist", key: "key1", expectVal: nil, err: ErrKeyNotExist, expired: false},
+		{desc: "get error ErrKeyExpired", key: "key", expectVal: nil, err: ErrKeyExpired, expired: true},
 	}
 
-	// mock time.Time.Before()
-	timeBefore = func(_ time.Time, _ time.Time) bool {
-		return true
-	}
-	val, err := cache.Get("test")
+	for _, tc := range testCases {
+		if tc.expired {
+		  // mock time.Time.Before()
+	      timeBefore = func(_ time.Time, _ time.Time) bool {
+		    return true
+	      }
+		}
 
-	assert.Nil(t, val)
-	assert.Equal(t, err, ErrKeyExpired, "key should expired.")
+		if val, err := cache.Get(tc.key); val != tc.expectVal || tc.err != err {
+			t.Errorf("Get failed")
+		}
+	}
 }
