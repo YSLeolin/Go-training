@@ -39,7 +39,6 @@ func TestGet(t *testing.T) {
 	type testCase struct {
 		desc      string
 		key       string
-		value     interface{}
 		expectVal interface{}
 		err  error
 		expired bool
